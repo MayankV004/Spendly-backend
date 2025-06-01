@@ -1,10 +1,9 @@
 import Transaction from "../models/transaction-model.js";
 import Budget from "../models/budget-model.js";
+
 export const getAllTransactions = async (req, res) => {
   try {
     const {
-      page = 1,
-      limit = 10,
       category,
       type,
       startDate,
@@ -14,7 +13,6 @@ export const getAllTransactions = async (req, res) => {
       sortOrder = "desc",
     } = req.query;
 
-    // Build filter object
     const filter = { userId: req.user.id };
 
     if (category && category !== "all") {
@@ -39,24 +37,13 @@ export const getAllTransactions = async (req, res) => {
     const sortConfig = {};
     sortConfig[sortBy] = sortOrder === "asc" ? 1 : -1;
 
-    // Execute query with pagination
-    const skip = (page - 1) * limit;
-    const transactions = await Transaction.find(filter)
-      .sort(sortConfig)
-      .limit(parseInt(limit))
-      .skip(skip);
-
-    const total = await Transaction.countDocuments(filter);
+    // Execute query without pagination
+    const transactions = await Transaction.find(filter).sort(sortConfig);
 
     res.json({
       success: true,
       data: transactions,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total,
-        limit: parseInt(limit),
-      },
+      total: transactions.length,
     });
   } catch (error) {
     res.status(500).json({
@@ -95,11 +82,9 @@ export const getStats = async (req, res) => {
     const targetMonth = month ? parseInt(month) : currentDate.getMonth() + 1;
     const targetYear = year ? parseInt(year) : currentDate.getFullYear();
 
- 
     const startOfMonth = new Date(targetYear, targetMonth - 1, 1);
     const endOfMonth = new Date(targetYear, targetMonth, 0, 23, 59, 59);
 
-   
     const stats = await Transaction.aggregate([
       {
         $match: {
@@ -158,7 +143,6 @@ export const getStats = async (req, res) => {
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]);
 
-  
     const income = stats.find((s) => s._id === "income")?.total || 0;
     const expenses = Math.abs(
       stats.find((s) => s._id === "expense")?.total || 0
@@ -200,7 +184,6 @@ export const createTransaction = async (req, res) => {
       });
     }
 
-  
     const transaction = new Transaction({
       userId: req.user.id,
       description: description.trim(),
@@ -213,7 +196,6 @@ export const createTransaction = async (req, res) => {
 
     await transaction.save();
 
-   
     if (type === "expense") {
       const transactionDate = new Date(transaction.date);
       const month = transactionDate.getMonth() + 1;
@@ -246,66 +228,65 @@ export const createTransaction = async (req, res) => {
   }
 };
 
-export const updateTransaction = async (req , res)=>{
-    try {
+export const updateTransaction = async (req, res) => {
+  try {
     const { id } = req.params;
     const { description, amount, type, category, date, notes } = req.body;
 
-    const existingTransaction = await Transaction.findOne({ 
-      _id: id, 
-      userId: req.user.id 
+    const existingTransaction = await Transaction.findOne({
+      _id: id,
+      userId: req.user.id,
     });
 
     if (!existingTransaction) {
       return res.status(404).json({
         success: false,
-        message: 'Transaction not found'
+        message: "Transaction not found",
       });
     }
 
-   
     const oldAmount = Math.abs(existingTransaction.amount);
     const oldCategory = existingTransaction.category;
     const oldType = existingTransaction.type;
     const oldDate = new Date(existingTransaction.date);
 
-   
     const updatedTransaction = await Transaction.findByIdAndUpdate(
       id,
       {
         description: description?.trim() || existingTransaction.description,
-        amount: type ? (type === 'expense' ? -Math.abs(amount) : Math.abs(amount)) : existingTransaction.amount,
+        amount: type
+          ? type === "expense"
+            ? -Math.abs(amount)
+            : Math.abs(amount)
+          : existingTransaction.amount,
         type: type || existingTransaction.type,
         category: category || existingTransaction.category,
         date: date || existingTransaction.date,
-        notes: notes?.trim() || existingTransaction.notes
+        notes: notes?.trim() || existingTransaction.notes,
       },
       { new: true, runValidators: true }
     );
 
-    
-    if (oldType === 'expense') {
-      
+    if (oldType === "expense") {
       await Budget.findOneAndUpdate(
-        { 
-          userId: req.user.id, 
-          category: oldCategory, 
-          month: oldDate.getMonth() + 1, 
-          year: oldDate.getFullYear() 
+        {
+          userId: req.user.id,
+          category: oldCategory,
+          month: oldDate.getMonth() + 1,
+          year: oldDate.getFullYear(),
         },
         { $inc: { spentAmount: -oldAmount } }
       );
     }
 
-    if (updatedTransaction.type === 'expense') {
-      
+    if (updatedTransaction.type === "expense") {
       const newDate = new Date(updatedTransaction.date);
       await Budget.findOneAndUpdate(
-        { 
-          userId: req.user.id, 
-          category: updatedTransaction.category, 
-          month: newDate.getMonth() + 1, 
-          year: newDate.getFullYear() 
+        {
+          userId: req.user.id,
+          category: updatedTransaction.category,
+          month: newDate.getMonth() + 1,
+          year: newDate.getFullYear(),
         },
         { $inc: { spentAmount: Math.abs(updatedTransaction.amount) } }
       );
@@ -313,49 +294,49 @@ export const updateTransaction = async (req , res)=>{
 
     res.json({
       success: true,
-      message: 'Transaction updated successfully',
-      data: updatedTransaction
+      message: "Transaction updated successfully",
+      data: updatedTransaction,
     });
-  } catch (error) { 
- res.status(500).json({
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Error updating transaction',
-      error: error.message
+      message: "Error updating transaction",
+      error: error.message,
     });
   }
-}
+};
 
-export const deleteTransaction = async(req , res)=>{
-    try {
+export const deleteTransaction = async (req, res) => {
+  try {
     const { id } = req.params;
 
-    const transaction = await Transaction.findOne({ 
-      _id: id, 
-      userId: req.user.id 
+    const transaction = await Transaction.findOne({
+      _id: id,
+      userId: req.user.id,
     });
 
     if (!transaction) {
       return res.status(404).json({
         success: false,
-        message: 'Transaction not found'
+        message: "Transaction not found",
       });
     }
 
     // Update budget if it was an expense
-    if (transaction.type === 'expense') {
+    if (transaction.type === "expense") {
       const transactionDate = new Date(transaction.date);
       const month = transactionDate.getMonth() + 1;
       const year = transactionDate.getFullYear();
 
       await Budget.findOneAndUpdate(
-        { 
-          userId: req.user.id, 
-          category: transaction.category, 
-          month, 
-          year 
+        {
+          userId: req.user.id,
+          category: transaction.category,
+          month,
+          year,
         },
-        { 
-          $inc: { spentAmount: -Math.abs(transaction.amount) }
+        {
+          $inc: { spentAmount: -Math.abs(transaction.amount) },
         }
       );
     }
@@ -364,13 +345,13 @@ export const deleteTransaction = async(req , res)=>{
 
     res.json({
       success: true,
-      message: 'Transaction deleted successfully'
+      message: "Transaction deleted successfully",
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error deleting transaction',
-      error: error.message
+      message: "Error deleting transaction",
+      error: error.message,
     });
   }
-}
+};
