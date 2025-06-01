@@ -5,6 +5,7 @@ export const protectRoute = async (req, res, next) => {
   try {
     const token = req.cookies.accessToken || req.headers.authorization?.split(' ')[1];
     
+    
     if (!token) {
       return res.status(401).json({ 
         success: false, 
@@ -22,13 +23,13 @@ export const protectRoute = async (req, res, next) => {
       });
     }
 
-    if (!user.isEmailVerified) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Email not verified' 
-      });
-    }
-
+    // if (!user.isEmailVerified) {
+    //   return res.status(401).json({ 
+    //     success: false, 
+    //     message: 'Email not verified' 
+    //   });
+    // }
+    // console.log("Check : ", user)
     req.user = user;
     next();
   } catch (error) {

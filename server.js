@@ -7,7 +7,7 @@ import cors from "cors";
 import authRoutes from "./routes/auth-routes.js";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
-
+import transactionRoutes from './routes/transaction-routes.js'
 dotenv.config();
 const app = express();
 
@@ -52,6 +52,7 @@ app.get('/', (req , res)=>{
     res.send("Server is Running!!!");
 })
 app.use('/api/auth', authLimiter, authRoutes)
+app.use('/api/transactions', transactionRoutes);
 
 
 
