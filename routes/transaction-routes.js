@@ -34,14 +34,14 @@ router.get(
 router.get(
   "/recent",
   protectRoute,
-  validateQuery(getRecentTransactionsQuerySchema),
+  
   getRecentTransactions
 );
 
 router.get(
   "/stats",
   protectRoute,
-  validateQuery(getStatsQuerySchema),
+
   getStats
 );
 

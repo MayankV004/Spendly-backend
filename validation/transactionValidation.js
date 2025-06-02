@@ -68,7 +68,9 @@ export const deleteTransactionParamsSchema = z.object({
 export const validateQuery = (schema) => {
   return (req, res, next) => {
     try {
+      console.log(schema);
       req.query = schema.parse(req.query);
+      
       next();
     } catch (error) {
       return res.status(400).json({

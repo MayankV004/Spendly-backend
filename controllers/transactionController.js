@@ -1,6 +1,6 @@
 import Transaction from "../models/transaction-model.js";
 import Budget from "../models/budget-model.js";
-
+import mongoose from "mongoose";
 export const getAllTransactions = async (req, res) => {
   try {
     const {
@@ -78,17 +78,22 @@ export const getRecentTransactions = async (req, res) => {
 export const getStats = async (req, res) => {
   try {
     const { month, year } = req.query;
+    
     const currentDate = new Date();
     const targetMonth = month ? parseInt(month) : currentDate.getMonth() + 1;
     const targetYear = year ? parseInt(year) : currentDate.getFullYear();
-
-    const startOfMonth = new Date(targetYear, targetMonth - 1, 1);
-    const endOfMonth = new Date(targetYear, targetMonth, 0, 23, 59, 59);
-
+    
+    
+    const startOfMonth = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999));
+    
+    // console.log('Start of month (UTC):', startOfMonth.toISOString());
+    // console.log('End of month (UTC):', endOfMonth.toISOString());
+    
     const stats = await Transaction.aggregate([
       {
         $match: {
-          userId: req.user.id,
+          userId: new mongoose.Types.ObjectId(req.user.id), 
           date: { $gte: startOfMonth, $lte: endOfMonth },
         },
       },
@@ -100,11 +105,13 @@ export const getStats = async (req, res) => {
         },
       },
     ]);
-
+    
+    console.log('Stats:', stats);
+    
     const categoryStats = await Transaction.aggregate([
       {
         $match: {
-          userId: req.user.id,
+          userId: new mongoose.Types.ObjectId(req.user.id), 
           type: "expense",
           date: { $gte: startOfMonth, $lte: endOfMonth },
         },
@@ -118,14 +125,18 @@ export const getStats = async (req, res) => {
       },
       { $sort: { total: -1 } },
     ]);
-
-    // Monthly trend (last 6 months)
+    
+    console.log('Category Stats:', categoryStats);
+    
+    // Monthly trend (last 6 months) - also fix the date range
+    const sixMonthsAgo = new Date(Date.UTC(targetYear, targetMonth - 7, 1, 0, 0, 0));
+    
     const monthlyTrend = await Transaction.aggregate([
       {
         $match: {
-          userId: req.user.id,
+          userId: new mongoose.Types.ObjectId(req.user.id),
           date: {
-            $gte: new Date(targetYear, targetMonth - 7, 1),
+            $gte: sixMonthsAgo,
             $lte: endOfMonth,
           },
         },
@@ -142,14 +153,14 @@ export const getStats = async (req, res) => {
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]);
-
+    
     const income = stats.find((s) => s._id === "income")?.total || 0;
     const expenses = Math.abs(
       stats.find((s) => s._id === "expense")?.total || 0
     );
     const savings = income - expenses;
     const savingsRate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
-
+    
     res.json({
       success: true,
       data: {
@@ -166,6 +177,7 @@ export const getStats = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Error in getStats:', error);
     res.status(500).json({
       success: false,
       message: "Error fetching transaction statistics",
