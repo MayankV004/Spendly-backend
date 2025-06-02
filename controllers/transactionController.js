@@ -106,7 +106,7 @@ export const getStats = async (req, res) => {
       },
     ]);
     
-    console.log('Stats:', stats);
+    // console.log('Stats:', stats);
     
     const categoryStats = await Transaction.aggregate([
       {
@@ -126,7 +126,7 @@ export const getStats = async (req, res) => {
       { $sort: { total: -1 } },
     ]);
     
-    console.log('Category Stats:', categoryStats);
+    // console.log('Category Stats:', categoryStats);
     
     // Monthly trend (last 6 months) - also fix the date range
     const sixMonthsAgo = new Date(Date.UTC(targetYear, targetMonth - 7, 1, 0, 0, 0));
@@ -321,7 +321,12 @@ export const updateTransaction = async (req, res) => {
 export const deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params;
-
+     if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid transaction ID format",
+      });
+    }
     const transaction = await Transaction.findOne({
       _id: id,
       userId: req.user.id,
@@ -353,8 +358,13 @@ export const deleteTransaction = async (req, res) => {
       );
     }
 
-    await Transaction.findByIdAndDelete(id);
-
+    const deletedTransaction = await Transaction.findByIdAndDelete(id);
+    if (!deletedTransaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Transaction could not be deleted",
+      });
+    }
     res.json({
       success: true,
       message: "Transaction deleted successfully",

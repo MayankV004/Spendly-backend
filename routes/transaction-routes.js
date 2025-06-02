@@ -9,62 +9,13 @@ import {
   updateTransaction,
 } from "../controllers/transactionController.js";
 
-import {
-  validateQuery,
-  validateBody,
-  validateParams,
-  getAllTransactionsQuerySchema,
-  getRecentTransactionsQuerySchema,
-  getStatsQuerySchema,
-  createTransactionBodySchema,
-  updateTransactionParamsSchema,
-  updateTransactionBodySchema,
-  deleteTransactionParamsSchema,
-} from "../validation/transactionValidation.js";
-
 const router = express.Router();
 
-router.get(
-  "/",
-  protectRoute,
-  validateQuery(getAllTransactionsQuerySchema),
-  getAllTransactions
-);
-
-router.get(
-  "/recent",
-  protectRoute,
-  
-  getRecentTransactions
-);
-
-router.get(
-  "/stats",
-  protectRoute,
-
-  getStats
-);
-
-router.post(
-  "/",
-  protectRoute,
-  validateBody(createTransactionBodySchema),
-  createTransaction
-);
-
-router.put(
-  "/:id",
-  protectRoute,
-  validateParams(updateTransactionParamsSchema),
-  validateBody(updateTransactionBodySchema),
-  updateTransaction
-);
-
-router.delete(
-  "/:id",
-  protectRoute,
-  validateParams(deleteTransactionParamsSchema),
-  deleteTransaction
-);
+router.get("/", protectRoute, getAllTransactions);
+router.get("/recent", protectRoute, getRecentTransactions);
+router.get("/stats", protectRoute, getStats);
+router.post("/", protectRoute, createTransaction);
+router.put("/:id", protectRoute, updateTransaction);
+router.post("/:id", protectRoute, deleteTransaction);
 
 export default router;
