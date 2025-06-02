@@ -14,10 +14,8 @@ const app = express();
 
 connectDB();
 
-// Middleware
-app.use(
-  cors({
-    origin: "http://localhost:3000",
+const corsOptions = { 
+  origin: "http://localhost:3000",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -29,7 +27,10 @@ app.use(
     ],
     credentials: true,
     optionsSuccessStatus: 200
-  })
+};
+// Middleware
+app.use(
+  cors(corsOptions)
 );
 
 app.use(express.json());
@@ -67,7 +68,8 @@ app.get("/", (req, res) => {
 });
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
-app.use("/api/transactions", transactionRoutes);
+// app.options("/api/transactions/*", cors(corsOptions));
+app.use("/api/transactions", cors(corsOptions), transactionRoutes);
 
 // error handler
 app.use((req, res) => {

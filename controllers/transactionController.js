@@ -244,7 +244,7 @@ export const updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const { description, amount, type, category, date, notes } = req.body;
-
+    
     const existingTransaction = await Transaction.findOne({
       _id: id,
       userId: req.user.id,
