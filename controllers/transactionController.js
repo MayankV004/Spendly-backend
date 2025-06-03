@@ -1,5 +1,4 @@
 import Transaction from "../models/transaction-model.js";
-import Budget from "../models/budget-model.js";
 import mongoose from "mongoose";
 export const getAllTransactions = async (req, res) => {
   try {
@@ -87,8 +86,7 @@ export const getStats = async (req, res) => {
     const startOfMonth = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0));
     const endOfMonth = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999));
     
-    // console.log('Start of month (UTC):', startOfMonth.toISOString());
-    // console.log('End of month (UTC):', endOfMonth.toISOString());
+    
     
     const stats = await Transaction.aggregate([
       {
@@ -106,8 +104,7 @@ export const getStats = async (req, res) => {
       },
     ]);
     
-    // console.log('Stats:', stats);
-    
+    // console.log('Stats:', stats);    
     const categoryStats = await Transaction.aggregate([
       {
         $match: {
@@ -244,7 +241,7 @@ export const updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const { description, amount, type, category, date, notes } = req.body;
-    
+
     const existingTransaction = await Transaction.findOne({
       _id: id,
       userId: req.user.id,
@@ -256,11 +253,6 @@ export const updateTransaction = async (req, res) => {
         message: "Transaction not found",
       });
     }
-
-    const oldAmount = Math.abs(existingTransaction.amount);
-    const oldCategory = existingTransaction.category;
-    const oldType = existingTransaction.type;
-    const oldDate = new Date(existingTransaction.date);
 
     const updatedTransaction = await Transaction.findByIdAndUpdate(
       id,
@@ -278,31 +270,6 @@ export const updateTransaction = async (req, res) => {
       },
       { new: true, runValidators: true }
     );
-
-    if (oldType === "expense") {
-      await Budget.findOneAndUpdate(
-        {
-          userId: req.user.id,
-          category: oldCategory,
-          month: oldDate.getMonth() + 1,
-          year: oldDate.getFullYear(),
-        },
-        { $inc: { spentAmount: -oldAmount } }
-      );
-    }
-
-    if (updatedTransaction.type === "expense") {
-      const newDate = new Date(updatedTransaction.date);
-      await Budget.findOneAndUpdate(
-        {
-          userId: req.user.id,
-          category: updatedTransaction.category,
-          month: newDate.getMonth() + 1,
-          year: newDate.getFullYear(),
-        },
-        { $inc: { spentAmount: Math.abs(updatedTransaction.amount) } }
-      );
-    }
 
     res.json({
       success: true,
@@ -337,25 +304,6 @@ export const deleteTransaction = async (req, res) => {
         success: false,
         message: "Transaction not found",
       });
-    }
-
-    // Update budget if it was an expense
-    if (transaction.type === "expense") {
-      const transactionDate = new Date(transaction.date);
-      const month = transactionDate.getMonth() + 1;
-      const year = transactionDate.getFullYear();
-
-      await Budget.findOneAndUpdate(
-        {
-          userId: req.user.id,
-          category: transaction.category,
-          month,
-          year,
-        },
-        {
-          $inc: { spentAmount: -Math.abs(transaction.amount) },
-        }
-      );
     }
 
     const deletedTransaction = await Transaction.findByIdAndDelete(id);

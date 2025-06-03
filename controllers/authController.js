@@ -12,6 +12,7 @@ import {
   forgotPasswordSchema,
   changePasswordSchema,
 } from "../validation/authValidation.js";
+import { decode } from "jsonwebtoken";
 
 export const signUp = async (req, res) => {
   try {
@@ -50,16 +51,33 @@ export const signUp = async (req, res) => {
       email,
       password,
     });
+
+    await user.save()
     // email Verify token
     const emailToken = jwt.generateEmailVerificationToken({
       userId: user._id,
       email: user.email,
     });
+    const accessToken = jwt.generateAccessToken({
+      userId: user._id,
+      email: user.email,
+    });
+    const refreshToken = jwt.generateRefreshToken({
+      userId: user._id,
+      email: user.email,
+    });
 
+    // Adding all the tokens
     user.verificationToken = emailToken;
     user.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    user.refreshToken.push({
+      token: refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
     await user.save();
+    setCookies(res, accessToken, refreshToken);
+
 
     //send verification email
 
@@ -89,8 +107,6 @@ export const login = async (req, res) => {
       });
     }
     const { email, password } = result.data;
-    // console.log(email);
-    // console.log(password);
     const user = await User.findOne({ email }).select("+password");
     
     if (!user || !(await user.comparePassword(password))) {
@@ -105,8 +121,14 @@ export const login = async (req, res) => {
     //     message: "Please verify your email first",
     //   });
     // }
+
+
+    //removing old refresh tokens
+    user.refreshToken = user.refreshToken.filter(
+      (token) => token.expiresAt > new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    );
+
     // generate tokens
-    
     const accessToken = jwt.generateAccessToken({
       userId: user._id,
       email: user.email,
@@ -120,13 +142,6 @@ export const login = async (req, res) => {
       token: refreshToken,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
-    
-    // console.log(user)
-    //removing old refresh tokens
-    user.refreshToken = user.refreshToken.filter(
-      (token) => token.expiresAt > Date.now()
-    );
-
     await user.save();
     setCookies(res, accessToken, refreshToken);
     return res.status(200).json({
@@ -158,8 +173,9 @@ export const login = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
+
     if (!token) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "Verification Token is required",
       });
@@ -173,6 +189,7 @@ export const verifyEmail = async (req, res) => {
         message: "Invalid or expired token",
       });
     }
+    console.log(checkedToken)
     const user = await User.findById(checkedToken.userId);
     if (!user) {
       return res.status(404).json({
@@ -340,9 +357,9 @@ export const refreshToken = async(req,res)=>{
 export const forgotPassword = async (req, res) => {
     try {
         const body = req.body;
-        console.log(body)
+        // console.log(body)
         const result = forgotPasswordSchema.safeParse(body);
-        console.log(result)
+        // console.log(result)
         if (!result.success) {
             return res.status(400).json({
                 success: false,
@@ -367,7 +384,7 @@ export const forgotPassword = async (req, res) => {
         await user.save();
 
         //send reset pass mail
-        await emailService.sendPasswordResetEmail(user.email, user.name, resetToken);
+        await emailService.sendPasswordResetEmail(user.email, user.name, user.resetPasswordToken);
         res.status(200).json({
             success: true,
             message: "Reset password email sent successfully",
@@ -384,7 +401,9 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
     try {
         const body = req.body;
+        console.log(body)
         const result = resetPasswordSchema.safeParse(body);
+        console.log("result",result.data)
         if (!result.success) {
             return res.status(400).json({
                 success: false,
@@ -392,15 +411,16 @@ export const resetPassword = async (req, res) => {
             });
         }
         const { token, newPassword } = result.data;
-
-        const decoded = jwt.verifyResetPasswordToken(token);
+        console.log("Token",token)
+        console.log("pass",newPassword)
+        const decoded = jwt.verifyPasswordResetToken(token);
         if (!decoded) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid or expired reset password token",
             });
         }
-
+        console.log("1",decode)
         const user = await User.findById(decoded.userId);
         if (!user || user.resetPasswordToken !== token || user.resetPasswordTokenExpires < new Date()) {
             return res.status(400).json({
@@ -408,7 +428,7 @@ export const resetPassword = async (req, res) => {
                 message: "Invalid or expired reset password token",
             });
         }
-
+        console.log("2",decode)
         // Update password
         user.password = newPassword;
         user.resetPasswordToken = null;

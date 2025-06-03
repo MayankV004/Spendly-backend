@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 
 export const sendVerificationEmail = async (email, firstName, verificationToken) => {
-  const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+  const verificationUrl = `${process.env.SERVER_URL}/api/auth/verify-email?token=${verificationToken}`;
   
   const mailOptions = {
     from: `"Finora" <${process.env.EMAIL_USER}>`,
@@ -40,7 +40,7 @@ export const sendVerificationEmail = async (email, firstName, verificationToken)
 };
 
 export const sendPasswordResetEmail = async (email, firstName, resetToken) => {
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.CLIENT_URL}/auth/reset-password?token=${resetToken}`;
   
   const mailOptions = {
     from: `"Finora" <${process.env.EMAIL_USER}>`,
@@ -72,7 +72,7 @@ export const sendPasswordResetEmail = async (email, firstName, resetToken) => {
 // Send welcome email after verification
 export const sendWelcomeEmail = async (email, firstName) => {
   const mailOptions = {
-    from: `"Finance Tracker" <${process.env.EMAIL_USER}>`,
+    from: `"Finora" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Welcome to Finora!',
     html: `
