@@ -18,7 +18,7 @@ const app = express();
 connectDB();
 
 const corsOptions = { 
-  origin: "http://localhost:3000",
+  origin: ["http://localhost:3000","https://finora-frontend.vercel.app"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
