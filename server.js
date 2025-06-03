@@ -9,6 +9,9 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import transactionRoutes from "./routes/transaction-routes.js";
 import userRoutes from "./routes/user-routes.js";
+import cron from "node-cron";
+import https from "https";
+
 dotenv.config();
 const app = express();
 
@@ -28,6 +31,7 @@ const corsOptions = {
     credentials: true,
     optionsSuccessStatus: 200
 };
+
 // Middleware
 app.use(
   cors(corsOptions)
@@ -41,6 +45,7 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 requests per windowMs
@@ -49,6 +54,7 @@ const limiter = rateLimit({
     message: "Too many requests, please try again later.",
   },
 });
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, 
@@ -59,8 +65,16 @@ const authLimiter = rateLimit({
 });
 
 app.use(limiter);
-
 app.use(morgan("dev"));
+
+// Keep-alive endpoint for cron job
+app.get("/keep-alive", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server is alive!",
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Routes
 app.get("/", (req, res) => {
@@ -71,7 +85,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/transactions", transactionRoutes);
 
-// error handler
+// Error handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -79,7 +93,7 @@ app.use((req, res) => {
   });
 });
 
-// Global
+// Global error handler
 app.use((error, req, res, next) => {
   console.error("Global error:", error);
 
@@ -91,6 +105,24 @@ app.use((error, req, res, next) => {
         : error.message,
   });
 });
+
+// Cron job to keep server awake (runs every 10 minutes)
+// Only run in production to avoid unnecessary requests during development
+if (process.env.NODE_ENV === "production" && process.env.RENDER_EXTERNAL_URL) {
+  cron.schedule("*/10 * * * *", () => {
+    const url = process.env.RENDER_EXTERNAL_URL + "/keep-alive";
+    
+    console.log(`Pinging server at ${new Date().toISOString()}: ${url}`);
+    
+    https.get(url, (res) => {
+      console.log(`Keep-alive ping successful: ${res.statusCode}`);
+    }).on("error", (err) => {
+      console.error("Keep-alive ping failed:", err.message);
+    });
+  });
+  
+  console.log("Cron job scheduled to keep server alive every 10 minutes");
+}
 
 app.listen(5000, () => {
   console.log("Server is running on port 5000");
