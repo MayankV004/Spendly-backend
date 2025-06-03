@@ -205,24 +205,6 @@ export const createTransaction = async (req, res) => {
 
     await transaction.save();
 
-    if (type === "expense") {
-      const transactionDate = new Date(transaction.date);
-      const month = transactionDate.getMonth() + 1;
-      const year = transactionDate.getFullYear();
-
-      await Budget.findOneAndUpdate(
-        {
-          userId: req.user.id,
-          category,
-          month,
-          year,
-        },
-        {
-          $inc: { spentAmount: Math.abs(amount) },
-        }
-      );
-    }
-
     res.status(201).json({
       success: true,
       message: "Transaction created successfully",

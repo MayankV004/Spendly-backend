@@ -401,7 +401,7 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
     try {
         const body = req.body;
-        console.log(body)
+        
         const result = resetPasswordSchema.safeParse(body);
         console.log("result",result.data)
         if (!result.success) {
@@ -411,8 +411,7 @@ export const resetPassword = async (req, res) => {
             });
         }
         const { token, newPassword } = result.data;
-        console.log("Token",token)
-        console.log("pass",newPassword)
+       
         const decoded = jwt.verifyPasswordResetToken(token);
         if (!decoded) {
             return res.status(400).json({
@@ -420,7 +419,7 @@ export const resetPassword = async (req, res) => {
                 message: "Invalid or expired reset password token",
             });
         }
-        console.log("1",decode)
+        
         const user = await User.findById(decoded.userId);
         if (!user || user.resetPasswordToken !== token || user.resetPasswordTokenExpires < new Date()) {
             return res.status(400).json({
@@ -428,7 +427,7 @@ export const resetPassword = async (req, res) => {
                 message: "Invalid or expired reset password token",
             });
         }
-        console.log("2",decode)
+        
         // Update password
         user.password = newPassword;
         user.resetPasswordToken = null;

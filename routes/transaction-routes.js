@@ -15,7 +15,7 @@ router.get("/", protectRoute, getAllTransactions);
 router.get("/recent", protectRoute, getRecentTransactions);
 router.get("/stats", protectRoute, getStats);
 router.post("/", protectRoute, createTransaction);
-router.post("/:id", protectRoute, updateTransaction);
-router.post("/:id", protectRoute, deleteTransaction);
+router.post("/update/:id", protectRoute, updateTransaction);
+router.post("/delete/:id", protectRoute, deleteTransaction);
 
 export default router;

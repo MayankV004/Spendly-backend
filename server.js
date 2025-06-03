@@ -51,7 +51,7 @@ const limiter = rateLimit({
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 requests per windowMs
+  max: 10, 
   message: {
     success: false,
     message: "Too many authentication requests, please try again later.",
@@ -66,10 +66,10 @@ app.use(morgan("dev"));
 app.get("/", (req, res) => {
   res.send("Server is Running!!!");
 });
+
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
-// app.options("/api/transactions/*", cors(corsOptions));
-app.use("/api/transactions", cors(corsOptions), transactionRoutes);
+app.use("/api/transactions", transactionRoutes);
 
 // error handler
 app.use((req, res) => {
