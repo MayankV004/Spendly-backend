@@ -12,7 +12,7 @@ export const getAllTransactions = async (req, res) => {
       sortOrder = "desc",
     } = req.query;
 
-    const filter = { userId: req.user.id };
+    const filter = {};
 
     if (category && category !== "all") {
       filter.category = category;
@@ -57,7 +57,7 @@ export const getRecentTransactions = async (req, res) => {
   try {
     const { limit = 5 } = req.query;
 
-    const transactions = await Transaction.find({ userId: req.user.id })
+    const transactions = await Transaction.find({})
       .sort({ date: -1 })
       .limit(parseInt(limit));
 
@@ -91,7 +91,7 @@ export const getStats = async (req, res) => {
     const stats = await Transaction.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(req.user.id), 
+          
           date: { $gte: startOfMonth, $lte: endOfMonth },
         },
       },
@@ -108,7 +108,7 @@ export const getStats = async (req, res) => {
     const categoryStats = await Transaction.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(req.user.id), 
+           
           type: "expense",
           date: { $gte: startOfMonth, $lte: endOfMonth },
         },
@@ -131,7 +131,6 @@ export const getStats = async (req, res) => {
     const monthlyTrend = await Transaction.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(req.user.id),
           date: {
             $gte: sixMonthsAgo,
             $lte: endOfMonth,
@@ -194,7 +193,7 @@ export const createTransaction = async (req, res) => {
     }
 
     const transaction = new Transaction({
-      userId: req.user.id,
+  
       description: description.trim(),
       amount: type === "expense" ? -Math.abs(amount) : Math.abs(amount),
       type,
@@ -226,7 +225,7 @@ export const updateTransaction = async (req, res) => {
 
     const existingTransaction = await Transaction.findOne({
       _id: id,
-      userId: req.user.id,
+      
     });
 
     if (!existingTransaction) {
@@ -278,7 +277,7 @@ export const deleteTransaction = async (req, res) => {
     }
     const transaction = await Transaction.findOne({
       _id: id,
-      userId: req.user.id,
+      
     });
 
     if (!transaction) {

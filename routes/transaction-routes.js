@@ -1,5 +1,4 @@
 import express from "express";
-import { protectRoute } from "../middleware/auth.js";
 import {
   createTransaction,
   deleteTransaction,
@@ -11,11 +10,11 @@ import {
 
 const router = express.Router();
 
-router.get("/", protectRoute, getAllTransactions);
-router.get("/recent", protectRoute, getRecentTransactions);
-router.get("/stats", protectRoute, getStats);
-router.post("/", protectRoute, createTransaction);
-router.post("/update/:id", protectRoute, updateTransaction);
-router.post("/delete/:id", protectRoute, deleteTransaction);
+router.get("/", getAllTransactions);
+router.get("/recent", getRecentTransactions);
+router.get("/stats", getStats);
+router.post("/", createTransaction);
+router.post("/update/:id", updateTransaction);
+router.post("/delete/:id", deleteTransaction);
 
 export default router;

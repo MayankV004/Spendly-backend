@@ -4,11 +4,9 @@ import connectDB from "./config/db.js";
 import helmet from "helmet";
 import morgan from "morgan";
 import cors from "cors";
-import authRoutes from "./routes/auth-routes.js";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import transactionRoutes from "./routes/transaction-routes.js";
-import userRoutes from "./routes/user-routes.js";
 import cron from "node-cron";
 import https from "https";
 
@@ -18,7 +16,7 @@ const app = express();
 connectDB();
 
 const corsOptions = { 
-  origin: ["http://localhost:3000","https://finora-frontend.vercel.app"],
+  origin: ["http://localhost:3000"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -55,14 +53,6 @@ const limiter = rateLimit({
   },
 });
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, 
-  message: {
-    success: false,
-    message: "Too many authentication requests, please try again later.",
-  },
-});
 
 app.use(limiter);
 app.use(morgan("dev"));
@@ -81,8 +71,6 @@ app.get("/", (req, res) => {
   res.send("Server is Running!!!");
 });
 
-app.use("/api/user", userRoutes);
-app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/transactions", transactionRoutes);
 
 // Error handler
